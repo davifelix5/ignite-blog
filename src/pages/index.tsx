@@ -1,4 +1,5 @@
 import { GetStaticProps } from 'next';
+import { ReactNode } from 'react';
 
 import { getPrismicClient } from '../services/prismic';
 
@@ -22,6 +23,10 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+}
+
+export default function Home() {
+  return <h1>Hello, world!</h1>;
 }
 
 // export default function Home() {
