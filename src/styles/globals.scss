@@ -4,6 +4,45 @@
   padding: 0;
 }
 
+:root {
+  --pink-500: #ff57b2;
+  --gray-100: #f8f8f8;
+  --gray-700: #1a1d23;
+  --gray-500: #bbb;
+  --gray-300: #d7d7d7;
+}
+
 html {
+  @media (max-width: 1180px) {
+    font-size: 87.5%;
+  }
+  @media (max-width: 720px) {
+    font-size: 75%;
+  }
+}
+
+body,
+input,
+text-area,
+select,
+button {
   font: 1em 'Inter', sans-serif;
+}
+
+body {
+  background-color: var(--gray-700);
+  color: var(--gray-100);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+ul {
+  list-style: none;
 }
