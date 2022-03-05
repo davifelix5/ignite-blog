@@ -1,5 +1,4 @@
 import { GetStaticProps } from 'next';
-import { ReactNode } from 'react';
 
 import { getPrismicClient } from '../services/prismic';
 
