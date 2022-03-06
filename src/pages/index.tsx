@@ -1,5 +1,13 @@
 import { GetStaticProps } from 'next';
+import Link from 'next/link';
+import Head from 'next/head';
 
+import { format } from 'date-fns';
+
+import Prismic from '@prismicio/client';
+import { FiCalendar, FiUser } from 'react-icons/fi';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
@@ -24,13 +32,101 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
-// export default function Home() {
-//   // TODO
-// }
+function formatPosts(post: Post) {
+  const formatedDate = format(
+    new Date(post.first_publication_date),
+    'dd MMM yyyy'
+  );
+  return {
+    ...post,
+    first_publication_date: formatedDate,
+  };
+}
 
-// export const getStaticProps = async () => {
-//   // const prismic = getPrismicClient();
-//   // const postsResponse = await prismic.query(TODO);
+export default function Home({
+  postsPagination: { results, next_page },
+}: HomeProps) {
+  const [loading, setLoading] = useState(false);
+  const [nextPage, setNextPage] = useState(next_page);
+  const [posts, setPosts] = useState(results.map(formatPosts));
 
-//   // TODO
-// };
+  async function handleLoadMorePosts() {
+    setLoading(true);
+    try {
+      const data = await fetch(next_page).then(res => res.json());
+      const newPosts = data.results.map(formatPosts);
+      setPosts(prevPosts => [...prevPosts, ...newPosts]);
+      setNextPage(data.next_page);
+    } catch {
+      toast.error('Erro no carregamento dos posts');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Posts | Ignite blog</title>
+      </Head>
+      <main className={`${commonStyles.container} ${styles.container}`}>
+        <ul className={styles.postList}>
+          {posts.map(({ data, first_publication_date, uid }) => (
+            <li className={styles.post} key={uid}>
+              <Link href={`/post/${uid}`}>
+                <a>
+                  <h2>{data.title}</h2>
+                  <h3>{data.subtitle}</h3>
+                </a>
+              </Link>
+              <div className={styles.infoContainer}>
+                <div className={styles.info}>
+                  <FiCalendar />
+                  <span>{first_publication_date.toLowerCase()}</span>
+                </div>
+                <div className={styles.info}>
+                  <FiUser />
+                  <span>{data.author}</span>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className={styles.bottomContainer}>
+          {nextPage &&
+            (loading ? (
+              <div className={styles.loader} />
+            ) : (
+              <button
+                onClick={handleLoadMorePosts}
+                type="button"
+                className={styles.nextPageButton}
+              >
+                Carregar mais posts
+              </button>
+            ))}
+        </div>
+      </main>
+    </>
+  );
+}
+
+export const getStaticProps: GetStaticProps = async () => {
+  const prismic = getPrismicClient();
+  const postsResponse = await prismic.query(
+    Prismic.Predicates.at('document.type', 'post'),
+    {
+      orderings: '[document.first_publication_date desc]',
+      pageSize: 5,
+    }
+  );
+
+  const { next_page, results } = postsResponse;
+
+  return {
+    props: {
+      postsPagination: { next_page, results },
+    },
+    revalidate: 60 * 60, // 1 hour
+  };
+};
