@@ -1,4 +1,5 @@
 import { GetStaticProps } from 'next';
+import Link from 'next/link';
 
 import { format } from 'date-fns';
 
@@ -33,7 +34,7 @@ interface HomeProps {
 function formatPosts(post: Post) {
   const formatedDate = format(
     new Date(post.first_publication_date),
-    'dd/MM/yyyy'
+    'dd MMM yyyy'
   );
   return {
     ...post,
@@ -46,7 +47,7 @@ export default function Home({
 }: HomeProps) {
   const [loading, setLoading] = useState(false);
   const [nextPage, setNextPage] = useState(next_page);
-  const [posts, setPosts] = useState(results);
+  const [posts, setPosts] = useState(results.map(formatPosts));
 
   async function handleLoadMorePosts() {
     setLoading(true);
@@ -67,14 +68,16 @@ export default function Home({
       <ul className={styles.postList}>
         {posts.map(({ data, first_publication_date, uid }) => (
           <li className={styles.post} key={uid}>
-            <a href="https://www.google.com" target="_blank" rel="noreferrer">
-              <h2>{data.title}</h2>
-              <h3>{data.subtitle}</h3>
-            </a>
+            <Link href={`/post/${uid}`}>
+              <a>
+                <h2>{data.title}</h2>
+                <h3>{data.subtitle}</h3>
+              </a>
+            </Link>
             <div className={styles.infoContainer}>
               <div className={styles.info}>
                 <FiCalendar />
-                <span>{first_publication_date}</span>
+                <span>{first_publication_date.toLowerCase()}</span>
               </div>
               <div className={styles.info}>
                 <FiUser />
@@ -114,11 +117,9 @@ export const getStaticProps: GetStaticProps = async () => {
 
   const { next_page, results } = postsResponse;
 
-  const formatedResults = results.map(formatPosts);
-
   return {
     props: {
-      postsPagination: { next_page, results: formatedResults },
+      postsPagination: { next_page, results },
     },
   };
 };
