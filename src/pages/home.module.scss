@@ -52,15 +52,37 @@
   }
 }
 
+.bottomContainer {
+  margin-top: 4rem;
+}
+
 .nextPageButton {
   background: none;
   color: var(--pink-500);
   font-weight: 600;
-  margin-top: 4rem;
   transition: filter 0.5s;
   border: none;
   &:hover {
     text-decoration: underline;
     filter: opacity(0.8);
   }
+}
+
+.loader {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0.25rem solid var(--gray-500);
+  border-top-color: var(--pink-500);
+  border-radius: 50%;
+
+  @keyframes spin {
+    from {
+      transform: rotate(0);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  animation: spin 1s infinite ease-in-out;
 }

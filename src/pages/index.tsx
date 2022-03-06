@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 
 import Prismic from '@prismicio/client';
 import { FiCalendar, FiUser } from 'react-icons/fi';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
 import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
@@ -28,13 +30,42 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
+function formatPosts(post: Post) {
+  const formatedDate = format(
+    new Date(post.first_publication_date),
+    'dd/MM/yyyy'
+  );
+  return {
+    ...post,
+    first_publication_date: formatedDate,
+  };
+}
+
 export default function Home({
   postsPagination: { results, next_page },
 }: HomeProps) {
+  const [loading, setLoading] = useState(false);
+  const [nextPage, setNextPage] = useState(next_page);
+  const [posts, setPosts] = useState(results);
+
+  async function handleLoadMorePosts() {
+    setLoading(true);
+    try {
+      const data = await fetch(next_page).then(res => res.json());
+      const newPosts = data.results.map(formatPosts);
+      setPosts(prevPosts => [...prevPosts, ...newPosts]);
+      setNextPage(data.next_page);
+    } catch {
+      toast.error('Erro no carregamento dos posts');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className={`${commonStyles.container} ${styles.container}`}>
       <ul className={styles.postList}>
-        {results.map(({ data, first_publication_date, uid }) => (
+        {posts.map(({ data, first_publication_date, uid }) => (
           <li className={styles.post} key={uid}>
             <a href="https://www.google.com" target="_blank" rel="noreferrer">
               <h2>{data.title}</h2>
@@ -53,11 +84,20 @@ export default function Home({
           </li>
         ))}
       </ul>
-      {next_page && (
-        <button type="button" className={styles.nextPageButton}>
-          Carregar mais posts
-        </button>
-      )}
+      <div className={styles.bottomContainer}>
+        {nextPage &&
+          (loading ? (
+            <div className={styles.loader} />
+          ) : (
+            <button
+              onClick={handleLoadMorePosts}
+              type="button"
+              className={styles.nextPageButton}
+            >
+              Carregar mais posts
+            </button>
+          ))}
+      </div>
     </main>
   );
 }
@@ -67,22 +107,14 @@ export const getStaticProps: GetStaticProps = async () => {
   const postsResponse = await prismic.query(
     Prismic.Predicates.at('document.type', 'post'),
     {
+      orderings: '[document.first_publication_date desc]',
       pageSize: 5,
     }
   );
 
   const { next_page, results } = postsResponse;
 
-  const formatedResults = results.map(post => {
-    const formatedDate = format(
-      new Date(post.first_publication_date),
-      'dd/MM/yyyy'
-    );
-    return {
-      ...post,
-      first_publication_date: formatedDate,
-    };
-  });
+  const formatedResults = results.map(formatPosts);
 
   return {
     props: {
