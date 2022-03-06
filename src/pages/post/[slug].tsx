@@ -14,6 +14,7 @@ import styles from './post.module.scss';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -49,12 +50,17 @@ export default function Post({ post }: PostProps) {
     );
   }
 
-  const { data, first_publication_date } = post;
+  const { data, first_publication_date, last_publication_date } = post;
 
-  const formatedDate = format(
+  const formatedInitialDate = format(
     new Date(first_publication_date),
     'dd MMM yyyy'
   ).toLowerCase();
+
+  const formatedLastDate = format(
+    new Date(last_publication_date),
+    `dd MMM yyyy 'às' H:ss`
+  );
 
   const content = data.content.map(({ heading, body }) => {
     return {
@@ -78,7 +84,7 @@ export default function Post({ post }: PostProps) {
             <div className={styles.infoContainer}>
               <div className={styles.info}>
                 <FiCalendar />
-                <span>{formatedDate}</span>
+                <span>{formatedInitialDate}</span>
               </div>
               <div className={styles.info}>
                 <FiUser />
@@ -89,6 +95,9 @@ export default function Post({ post }: PostProps) {
                 <span>4 min</span>
               </div>
             </div>
+            {last_publication_date && (
+              <p className={styles.edited}>* editado em {formatedLastDate}</p>
+            )}
           </div>
           {content.map(postSection => (
             <section key={postSection.heading}>
@@ -127,9 +136,18 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   const slug = params.slug as string;
   const post = await prismic.getByUID('post', slug, {});
 
+  const { last_publication_date, first_publication_date } = post;
+  const editionDate =
+    last_publication_date === first_publication_date
+      ? null
+      : last_publication_date;
+
   return {
     props: {
-      post,
+      post: {
+        ...post,
+        last_publication_date: editionDate,
+      },
     },
     revalidate: 60 * 60, // 1 hour
   };
