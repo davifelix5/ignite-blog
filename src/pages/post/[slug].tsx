@@ -1,5 +1,6 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
 import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
@@ -37,9 +38,14 @@ export default function Post({ post }: PostProps) {
 
   if (isFallback) {
     return (
-      <main className={commonStyles.container}>
-        <p>Carregando...</p>
-      </main>
+      <>
+        <Head>
+          <title>Carregando... | Ignite blog</title>
+        </Head>
+        <main className={commonStyles.container}>
+          <p>Carregando...</p>
+        </main>
+      </>
     );
   }
 
@@ -58,36 +64,41 @@ export default function Post({ post }: PostProps) {
   });
 
   return (
-    <main>
-      <div className={styles.banner}>
-        <img src={data.banner.url} alt="Post Banner" />
-      </div>
-      <article className={`${styles.post} ${commonStyles.container}`}>
-        <div className={styles.header}>
-          <h1>{data.title}</h1>
-          <div className={styles.infoContainer}>
-            <div className={styles.info}>
-              <FiCalendar />
-              <span>{formatedDate}</span>
-            </div>
-            <div className={styles.info}>
-              <FiUser />
-              <span>{data.author}</span>
-            </div>
-            <div className={styles.info}>
-              <FiClock />
-              <span>4 min</span>
+    <>
+      <Head>
+        <title>{data.title} | Ignite blog</title>
+      </Head>
+      <main>
+        <div className={styles.banner}>
+          <img src={data.banner.url} alt="Post Banner" />
+        </div>
+        <article className={`${styles.post} ${commonStyles.container}`}>
+          <div className={styles.header}>
+            <h1>{data.title}</h1>
+            <div className={styles.infoContainer}>
+              <div className={styles.info}>
+                <FiCalendar />
+                <span>{formatedDate}</span>
+              </div>
+              <div className={styles.info}>
+                <FiUser />
+                <span>{data.author}</span>
+              </div>
+              <div className={styles.info}>
+                <FiClock />
+                <span>4 min</span>
+              </div>
             </div>
           </div>
-        </div>
-        {content.map(postSection => (
-          <section key={postSection.heading}>
-            <h2>{postSection.heading}</h2>
-            {ReactHTMLParser(postSection.body)}
-          </section>
-        ))}
-      </article>
-    </main>
+          {content.map(postSection => (
+            <section key={postSection.heading}>
+              <h2>{postSection.heading}</h2>
+              {ReactHTMLParser(postSection.body)}
+            </section>
+          ))}
+        </article>
+      </main>
+    </>
   );
 }
 

@@ -1,5 +1,6 @@
 import { GetStaticProps } from 'next';
 import Link from 'next/link';
+import Head from 'next/head';
 
 import { format } from 'date-fns';
 
@@ -64,44 +65,49 @@ export default function Home({
   }
 
   return (
-    <main className={`${commonStyles.container} ${styles.container}`}>
-      <ul className={styles.postList}>
-        {posts.map(({ data, first_publication_date, uid }) => (
-          <li className={styles.post} key={uid}>
-            <Link href={`/post/${uid}`}>
-              <a>
-                <h2>{data.title}</h2>
-                <h3>{data.subtitle}</h3>
-              </a>
-            </Link>
-            <div className={styles.infoContainer}>
-              <div className={styles.info}>
-                <FiCalendar />
-                <span>{first_publication_date.toLowerCase()}</span>
+    <>
+      <Head>
+        <title>Posts | Ignite blog</title>
+      </Head>
+      <main className={`${commonStyles.container} ${styles.container}`}>
+        <ul className={styles.postList}>
+          {posts.map(({ data, first_publication_date, uid }) => (
+            <li className={styles.post} key={uid}>
+              <Link href={`/post/${uid}`}>
+                <a>
+                  <h2>{data.title}</h2>
+                  <h3>{data.subtitle}</h3>
+                </a>
+              </Link>
+              <div className={styles.infoContainer}>
+                <div className={styles.info}>
+                  <FiCalendar />
+                  <span>{first_publication_date.toLowerCase()}</span>
+                </div>
+                <div className={styles.info}>
+                  <FiUser />
+                  <span>{data.author}</span>
+                </div>
               </div>
-              <div className={styles.info}>
-                <FiUser />
-                <span>{data.author}</span>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className={styles.bottomContainer}>
-        {nextPage &&
-          (loading ? (
-            <div className={styles.loader} />
-          ) : (
-            <button
-              onClick={handleLoadMorePosts}
-              type="button"
-              className={styles.nextPageButton}
-            >
-              Carregar mais posts
-            </button>
+            </li>
           ))}
-      </div>
-    </main>
+        </ul>
+        <div className={styles.bottomContainer}>
+          {nextPage &&
+            (loading ? (
+              <div className={styles.loader} />
+            ) : (
+              <button
+                onClick={handleLoadMorePosts}
+                type="button"
+                className={styles.nextPageButton}
+              >
+                Carregar mais posts
+              </button>
+            ))}
+        </div>
+      </main>
+    </>
   );
 }
 
