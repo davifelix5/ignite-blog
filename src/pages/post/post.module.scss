@@ -1,1 +1,68 @@
-// TODO
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 50vh;
+  background-clip: border-box;
+  overflow: hidden;
+}
+
+.post {
+  margin-bottom: 5rem;
+  margin-top: 5rem;
+  font-size: 1.125rem;
+  line-height: 2rem;
+
+  h2 {
+    font-size: 2.25rem;
+    margin-bottom: 3.5rem;
+    margin-top: 3rem;
+  }
+
+  strong {
+    font-weight: 700;
+    color: var(--pink-500);
+  }
+
+  p {
+    margin: 1rem 0;
+  }
+
+  ul {
+    list-style: disc;
+  }
+
+  pre {
+    margin: 2rem 0;
+    background-color: var(--gray-600);
+    display: block;
+    height: 3.5rem;
+    line-height: 3.5rem;
+    padding: 0 1rem;
+    border-radius: 0.5rem;
+  }
+}
+
+.post .header {
+  margin-bottom: 4rem;
+
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .infoContainer {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+}
