@@ -8,7 +8,7 @@
 }
 
 .post {
-  margin-bottom: 5rem;
+  margin-bottom: 3.5rem;
   margin-top: 5rem;
   font-size: 1.125rem;
   line-height: 2rem;
@@ -67,5 +67,41 @@
 
   .edited {
     color: var(--gray-500);
+  }
+}
+
+.navigation {
+  display: grid;
+  grid-template-areas: 'previous next';
+
+  padding: 3rem 0;
+  border-top: 1px solid var(--gray-300);
+
+  div {
+    display: flex;
+    flex-direction: column;
+
+    &:nth-child(1) {
+      align-items: flex-start;
+      grid-area: previous;
+    }
+
+    &:nth-child(2) {
+      align-items: flex-end;
+      grid-area: next;
+    }
+  }
+
+  p {
+    margin-bottom: 0.5rem;
+  }
+
+  a {
+    color: var(--pink-500);
+    font-weight: 600;
+    transition: filter 0.3s;
+    &:hover {
+      filter: opacity(0.8);
+    }
   }
 }

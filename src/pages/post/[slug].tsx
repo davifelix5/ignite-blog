@@ -1,6 +1,7 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 
 import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
@@ -15,6 +16,8 @@ import styles from './post.module.scss';
 interface Post {
   first_publication_date: string | null;
   last_publication_date: string | null;
+  href: string;
+  uid: string;
   data: {
     title: string;
     banner: {
@@ -31,10 +34,12 @@ interface Post {
 }
 
 interface PostProps {
+  previousPost: Post;
   post: Post;
+  nextPost: Post;
 }
 
-export default function Post({ post }: PostProps) {
+export default function Post({ previousPost, post, nextPost }: PostProps) {
   const { isFallback } = useRouter();
 
   if (isFallback) {
@@ -106,6 +111,28 @@ export default function Post({ post }: PostProps) {
             </section>
           ))}
         </article>
+        <div className={`${commonStyles.container} ${styles.navigation}`}>
+          <div>
+            {previousPost && (
+              <>
+                <p>{previousPost.data.title}</p>
+                <Link href={`/post/${previousPost.uid}`}>
+                  <a>Post anterior</a>
+                </Link>
+              </>
+            )}
+          </div>
+          <div>
+            {nextPost && (
+              <>
+                <p>{nextPost.data.title}</p>
+                <Link href={`/post/${nextPost.uid}`}>
+                  <a>Próximo post</a>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
       </main>
     </>
   );
@@ -117,7 +144,6 @@ export const getStaticPaths: GetStaticPaths = async () => {
     Prismic.Predicates.at('document.type', 'post'),
     {
       orderings: '[document.first_publication_date desc]',
-      pageSize: 5,
     }
   );
 
@@ -142,13 +168,33 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
       ? null
       : last_publication_date;
 
+  const nextPosts = await prismic.query(
+    Prismic.predicates.at('document.type', 'post'),
+    {
+      orderings: '[document.first_publication_date desc]',
+      after: post.id,
+      pageSize: 1,
+    }
+  );
+
+  const previousPosts = await prismic.query(
+    Prismic.predicates.at('document.type', 'post'),
+    {
+      orderings: '[document.first_publication_date]',
+      after: post.id,
+      pageSize: 1,
+    }
+  );
+
   return {
     props: {
       post: {
         ...post,
         last_publication_date: editionDate,
       },
+      previousPost: previousPosts.results[0] || null,
+      nextPost: nextPosts.results[0] || null,
     },
-    revalidate: 60 * 60, // 1 hour
+    revalidate: 30 * 60, // 30 minutes
   };
 };
