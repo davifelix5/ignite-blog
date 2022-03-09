@@ -4,11 +4,11 @@ import Head from 'next/head';
 
 import { format } from 'date-fns';
 
-import Prismic from '@prismicio/client';
 import { FiCalendar, FiUser } from 'react-icons/fi';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { getPrismicClient } from '../services/prismic';
+
+import { createClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -112,14 +112,14 @@ export default function Home({
 }
 
 export const getStaticProps: GetStaticProps = async () => {
-  const prismic = getPrismicClient();
-  const postsResponse = await prismic.query(
-    Prismic.Predicates.at('document.type', 'post'),
-    {
-      orderings: '[document.first_publication_date desc]',
-      pageSize: 5,
-    }
-  );
+  const client = createClient();
+  const postsResponse = await client.getByType('post', {
+    pageSize: 5,
+    orderings: {
+      field: 'document.first_publication_date',
+      direction: 'desc',
+    },
+  });
 
   const { next_page, results } = postsResponse;
 

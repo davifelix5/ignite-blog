@@ -3,12 +3,11 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 
-import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
 import ReactHTMLParser from 'react-html-parser';
 import { format } from 'date-fns';
-import { getPrismicClient } from '../../services/prismic';
+import { createClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
@@ -37,9 +36,15 @@ interface PostProps {
   previousPost: Post;
   post: Post;
   nextPost: Post;
+  preview: boolean;
 }
 
-export default function Post({ previousPost, post, nextPost }: PostProps) {
+export default function Post({
+  previousPost,
+  post,
+  nextPost,
+  preview,
+}: PostProps) {
   const { isFallback } = useRouter();
 
   if (isFallback) {
@@ -50,6 +55,32 @@ export default function Post({ previousPost, post, nextPost }: PostProps) {
         </Head>
         <main className={commonStyles.container}>
           <p>Carregando...</p>
+        </main>
+      </>
+    );
+  }
+
+  if (!post) {
+    return (
+      <>
+        <Head>
+          <title>Carregando... | Ignite blog</title>
+        </Head>
+        <main className={commonStyles.container}>
+          <p>Post not found</p>
+        </main>
+      </>
+    );
+  }
+
+  if (!post) {
+    return (
+      <>
+        <Head>
+          <title>Not found | Ignite blog</title>
+        </Head>
+        <main className={commonStyles.container}>
+          <p>Post not found</p>
         </main>
       </>
     );
@@ -133,21 +164,29 @@ export default function Post({ previousPost, post, nextPost }: PostProps) {
             )}
           </div>
         </div>
+        {preview && (
+          <aside className={`${commonStyles.container} ${styles.asideContent}`}>
+            <Link href="/api/exit-preview">
+              <a>Sair do modo preview</a>
+            </Link>
+          </aside>
+        )}
       </main>
     </>
   );
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const prismic = getPrismicClient();
-  const posts = await prismic.query(
-    Prismic.Predicates.at('document.type', 'post'),
-    {
-      orderings: '[document.first_publication_date desc]',
-    }
-  );
+  const client = createClient();
 
-  const paths = posts.results.map(post => {
+  const posts = await client.getAllByType('post', {
+    orderings: {
+      field: 'document.first_publication_date',
+      direction: 'desc',
+    },
+  });
+
+  const paths = posts.map(post => {
     return { params: { slug: post.uid } };
   });
 
@@ -157,44 +196,59 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const prismic = getPrismicClient();
-  const slug = params.slug as string;
-  const post = await prismic.getByUID('post', slug, {});
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData,
+}) => {
+  try {
+    const client = createClient({ previewData });
 
-  const { last_publication_date, first_publication_date } = post;
-  const editionDate =
-    last_publication_date === first_publication_date
-      ? null
-      : last_publication_date;
+    const slug = params.slug as string;
 
-  const nextPosts = await prismic.query(
-    Prismic.predicates.at('document.type', 'post'),
-    {
-      orderings: '[document.first_publication_date desc]',
-      after: post.id,
-      pageSize: 1,
-    }
-  );
+    const post = await client.getByUID('post', slug);
 
-  const previousPosts = await prismic.query(
-    Prismic.predicates.at('document.type', 'post'),
-    {
-      orderings: '[document.first_publication_date]',
-      after: post.id,
-      pageSize: 1,
-    }
-  );
+    const { last_publication_date, first_publication_date } = post;
+    const editionDate =
+      last_publication_date === first_publication_date
+        ? null
+        : last_publication_date;
 
-  return {
-    props: {
-      post: {
-        ...post,
-        last_publication_date: editionDate,
+    const nextPosts = await client.getByType('post', {
+      orderings: {
+        field: 'document.first_publication_date',
+        direction: 'desc',
       },
-      previousPost: previousPosts.results[0] || null,
-      nextPost: nextPosts.results[0] || null,
-    },
-    revalidate: 30 * 60, // 30 minutes
-  };
+      after: post.id,
+      pageSize: 1,
+    });
+
+    const previousPosts = await client.getByType('post', {
+      orderings: {
+        field: 'document.first_publication_date',
+        direction: 'asc',
+      },
+      after: post.id,
+      pageSize: 1,
+    });
+
+    return {
+      props: {
+        post: {
+          ...post,
+          last_publication_date: editionDate,
+        },
+        previousPost: previousPosts.results[0] || null,
+        nextPost: nextPosts.results[0] || null,
+        preview,
+      },
+      revalidate: 30 * 60, // 30 minutes
+    };
+  } catch (err) {
+    return {
+      props: {
+        post: false,
+      },
+    };
+  }
 };
