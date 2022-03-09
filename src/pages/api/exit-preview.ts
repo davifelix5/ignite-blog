@@ -1,8 +1,9 @@
 import { NextApiHandler } from 'next';
-import * as prismicNext from '@prismicio/next';
 
 const exitPreview: NextApiHandler = async (req, res) => {
-  prismicNext.exitPreview({ req, res });
+  res.clearPreviewData();
+  res.writeHead(307, { location: '/' });
+  res.end();
 };
 
 export default exitPreview;
