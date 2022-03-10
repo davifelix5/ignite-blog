@@ -40,6 +40,8 @@ interface PostProps {
   preview: boolean;
 }
 
+const AVG_WORD_PER_MINUTE = 250;
+
 export default function Post({
   previousPost,
   post,
@@ -106,6 +108,14 @@ export default function Post({
     };
   });
 
+  const words = data.content.reduce((acc, { heading, body }) => {
+    const headingWords = heading ? heading.split(' ').length : 0;
+    const bodyWords = body ? RichText.asText(body).split(' ').length : 0;
+    return acc + headingWords + bodyWords;
+  }, 0);
+
+  const readingTimeInMinutes = Math.round(words / AVG_WORD_PER_MINUTE);
+
   return (
     <>
       <Head>
@@ -129,7 +139,7 @@ export default function Post({
               </div>
               <div className={styles.info}>
                 <FiClock />
-                <span>4 min</span>
+                <span>{readingTimeInMinutes} min</span>
               </div>
             </div>
             {last_publication_date && (
