@@ -215,6 +215,7 @@ export const getStaticProps: GetStaticProps = async ({
         : last_publication_date;
 
     const nextPosts = await client.getByType('post', {
+      fetch: 'post.title',
       orderings: {
         field: 'document.first_publication_date',
         direction: 'desc',
@@ -224,6 +225,7 @@ export const getStaticProps: GetStaticProps = async ({
     });
 
     const previousPosts = await client.getByType('post', {
+      fetch: 'post.title',
       orderings: {
         field: 'document.first_publication_date',
         direction: 'asc',
