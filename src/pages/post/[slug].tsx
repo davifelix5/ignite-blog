@@ -1,19 +1,23 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 
-import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
 import ReactHTMLParser from 'react-html-parser';
 import { format } from 'date-fns';
-import { getPrismicClient } from '../../services/prismic';
+import { createClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
+import Comments from '../../components/Comments';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
+  href: string;
+  uid: string;
   data: {
     title: string;
     banner: {
@@ -30,10 +34,20 @@ interface Post {
 }
 
 interface PostProps {
+  previousPost: Post;
   post: Post;
+  nextPost: Post;
+  preview: boolean;
 }
 
-export default function Post({ post }: PostProps) {
+const AVG_WORD_PER_MINUTE = 250;
+
+export default function Post({
+  previousPost,
+  post,
+  nextPost,
+  preview,
+}: PostProps) {
   const { isFallback } = useRouter();
 
   if (isFallback) {
@@ -49,12 +63,43 @@ export default function Post({ post }: PostProps) {
     );
   }
 
-  const { data, first_publication_date } = post;
+  if (!post) {
+    return (
+      <>
+        <Head>
+          <title>Carregando... | Ignite blog</title>
+        </Head>
+        <main className={commonStyles.container}>
+          <p>Post not found</p>
+        </main>
+      </>
+    );
+  }
 
-  const formatedDate = format(
+  if (!post) {
+    return (
+      <>
+        <Head>
+          <title>Not found | Ignite blog</title>
+        </Head>
+        <main className={commonStyles.container}>
+          <p>Post not found</p>
+        </main>
+      </>
+    );
+  }
+
+  const { data, first_publication_date, last_publication_date } = post;
+
+  const formatedInitialDate = format(
     new Date(first_publication_date),
     'dd MMM yyyy'
   ).toLowerCase();
+
+  const formatedLastDate = format(
+    new Date(last_publication_date),
+    `dd MMM yyyy 'às' H:ss`
+  );
 
   const content = data.content.map(({ heading, body }) => {
     return {
@@ -62,6 +107,14 @@ export default function Post({ post }: PostProps) {
       body: RichText.asHtml(body),
     };
   });
+
+  const words = data.content.reduce((acc, { heading, body }) => {
+    const headingWords = heading ? heading.split(' ').length : 0;
+    const bodyWords = body ? RichText.asText(body).split(' ').length : 0;
+    return acc + headingWords + bodyWords;
+  }, 0);
+
+  const readingTimeInMinutes = Math.round(words / AVG_WORD_PER_MINUTE);
 
   return (
     <>
@@ -78,7 +131,7 @@ export default function Post({ post }: PostProps) {
             <div className={styles.infoContainer}>
               <div className={styles.info}>
                 <FiCalendar />
-                <span>{formatedDate}</span>
+                <span>{formatedInitialDate}</span>
               </div>
               <div className={styles.info}>
                 <FiUser />
@@ -86,9 +139,12 @@ export default function Post({ post }: PostProps) {
               </div>
               <div className={styles.info}>
                 <FiClock />
-                <span>4 min</span>
+                <span>{readingTimeInMinutes} min</span>
               </div>
             </div>
+            {last_publication_date && (
+              <p className={styles.edited}>* editado em {formatedLastDate}</p>
+            )}
           </div>
           {content.map(postSection => (
             <section key={postSection.heading}>
@@ -97,22 +153,52 @@ export default function Post({ post }: PostProps) {
             </section>
           ))}
         </article>
+        <div className={`${commonStyles.container} ${styles.navigation}`}>
+          <div>
+            {previousPost && (
+              <>
+                <p>{previousPost.data.title}</p>
+                <Link href={`/post/${previousPost.uid}`}>
+                  <a>Post anterior</a>
+                </Link>
+              </>
+            )}
+          </div>
+          <div>
+            {nextPost && (
+              <>
+                <p>{nextPost.data.title}</p>
+                <Link href={`/post/${nextPost.uid}`}>
+                  <a>Próximo post</a>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+        <Comments />
+        {preview && (
+          <aside className={`${commonStyles.container} ${styles.asideContent}`}>
+            <Link href="/api/exit-preview">
+              <a>Sair do modo preview</a>
+            </Link>
+          </aside>
+        )}
       </main>
     </>
   );
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const prismic = getPrismicClient();
-  const posts = await prismic.query(
-    Prismic.Predicates.at('document.type', 'post'),
-    {
-      orderings: '[document.first_publication_date desc]',
-      pageSize: 5,
-    }
-  );
+  const client = createClient();
 
-  const paths = posts.results.map(post => {
+  const posts = await client.getAllByType('post', {
+    orderings: {
+      field: 'document.first_publication_date',
+      direction: 'desc',
+    },
+  });
+
+  const paths = posts.map(post => {
     return { params: { slug: post.uid } };
   });
 
@@ -122,15 +208,61 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const prismic = getPrismicClient();
-  const slug = params.slug as string;
-  const post = await prismic.getByUID('post', slug, {});
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData,
+}) => {
+  try {
+    const client = createClient({ previewData });
 
-  return {
-    props: {
-      post,
-    },
-    revalidate: 60 * 60, // 1 hour
-  };
+    const slug = params.slug as string;
+
+    const post = await client.getByUID('post', slug);
+
+    const { last_publication_date, first_publication_date } = post;
+    const editionDate =
+      last_publication_date === first_publication_date
+        ? null
+        : last_publication_date;
+
+    const nextPosts = await client.getByType('post', {
+      fetch: 'post.title',
+      orderings: {
+        field: 'document.first_publication_date',
+        direction: 'desc',
+      },
+      after: post.id,
+      pageSize: 1,
+    });
+
+    const previousPosts = await client.getByType('post', {
+      fetch: 'post.title',
+      orderings: {
+        field: 'document.first_publication_date',
+        direction: 'asc',
+      },
+      after: post.id,
+      pageSize: 1,
+    });
+
+    return {
+      props: {
+        post: {
+          ...post,
+          last_publication_date: editionDate,
+        },
+        previousPost: previousPosts.results[0] || null,
+        nextPost: nextPosts.results[0] || null,
+        preview,
+      },
+      revalidate: 30 * 60, // 30 minutes
+    };
+  } catch (err) {
+    return {
+      props: {
+        post: false,
+      },
+    };
+  }
 };
